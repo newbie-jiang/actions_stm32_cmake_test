@@ -69,9 +69,6 @@ jobs:
           cd ..
         fi
 
-    - name: Check build directory content
-      run: ls -la build
-
     - name: Copy build artifacts to gh-pages
       run: |
         cp -r build/. gh-pages/
