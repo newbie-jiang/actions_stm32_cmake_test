@@ -24,7 +24,7 @@ jobs:
 
     - name: Configure CMake
       working-directory: build
-      run: cmake .. 
+      run: cmake ..
 
     - name: Build with Make
       working-directory: build
@@ -33,3 +33,9 @@ jobs:
     - name: List build output files
       working-directory: build
       run: ls -l
+
+    - name: Upload entire build directory
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-directory
+        path: build/
