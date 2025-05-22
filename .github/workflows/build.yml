@@ -14,7 +14,17 @@ jobs:
     - name: Checkout repository (master branch)
       uses: actions/checkout@v4
 
-    - name: Install ARM GCC toolchain
+    - name: Check if ARM GCC toolchain is installed
+      id: check_toolchain
+      run: |
+        if command -v arm-none-eabi-gcc >/dev/null 2>&1; then
+          echo "toolchain_installed=true" >> $GITHUB_OUTPUT
+        else
+          echo "toolchain_installed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install ARM GCC toolchain if needed
+      if: steps.check_toolchain.outputs.toolchain_installed == 'false'
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
@@ -37,13 +47,11 @@ jobs:
     - name: Setup gh-pages branch workspace
       run: |
         set -e
-        # 如果 gh-pages 目录不存在则初始化git仓库
         if [ ! -d gh-pages ]; then
           mkdir gh-pages
           cd gh-pages
           git init
           git remote add origin https://github.com/${{ github.repository }}.git
-          # 检查远程是否有gh-pages分支
           if git ls-remote --exit-code --heads origin gh-pages; then
             git fetch origin gh-pages
             git checkout -b gh-pages origin/gh-pages
@@ -54,11 +62,20 @@ jobs:
             git push -u origin gh-pages
           fi
           cd ..
+        else
+          cd gh-pages
+          git fetch origin
+          git checkout gh-pages || git checkout -b gh-pages
+          cd ..
         fi
+
+    - name: Check build directory content
+      run: ls -la build
 
     - name: Copy build artifacts to gh-pages
       run: |
-        cp -r build/* gh-pages/
+        cp -r build/. gh-pages/
+        ls -la gh-pages
 
     - name: Commit and push build artifacts to gh-pages
       run: |
