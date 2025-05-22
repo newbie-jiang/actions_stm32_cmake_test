@@ -1,0 +1,1 @@
+--- use github actions building stm32 cmake project   test
