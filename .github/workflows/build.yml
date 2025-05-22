@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repository (master branch)
       uses: actions/checkout@v4
 
     - name: Install ARM GCC toolchain
@@ -24,7 +24,7 @@ jobs:
 
     - name: Configure CMake
       working-directory: build
-      run: cmake .. 
+      run: cmake ..
 
     - name: Build with Make
       working-directory: build
@@ -34,11 +34,27 @@ jobs:
       working-directory: build
       run: ls -l
 
-    - name: Checkout gh-pages branch
-      uses: actions/checkout@v4
-      with:
-        ref: gh-pages
-        path: gh-pages
+    - name: Setup gh-pages branch workspace
+      run: |
+        set -e
+        # 如果 gh-pages 目录不存在则初始化git仓库
+        if [ ! -d gh-pages ]; then
+          mkdir gh-pages
+          cd gh-pages
+          git init
+          git remote add origin https://github.com/${{ github.repository }}.git
+          # 检查远程是否有gh-pages分支
+          if git ls-remote --exit-code --heads origin gh-pages; then
+            git fetch origin gh-pages
+            git checkout -b gh-pages origin/gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf .
+            git commit --allow-empty -m "Initialize gh-pages branch"
+            git push -u origin gh-pages
+          fi
+          cd ..
+        fi
 
     - name: Copy build artifacts to gh-pages
       run: |
@@ -50,5 +66,5 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git add .
-        git commit -m "Auto update build artifacts from master" || echo "No changes to commit"
+        git diff-index --quiet HEAD || git commit -m "Auto update build artifacts from master"
         git push origin gh-pages
