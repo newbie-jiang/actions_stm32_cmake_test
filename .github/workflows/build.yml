@@ -11,20 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository (master branch)
+    - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Check if ARM GCC toolchain is installed
-      id: check_toolchain
-      run: |
-        if command -v arm-none-eabi-gcc >/dev/null 2>&1; then
-          echo "toolchain_installed=true" >> $GITHUB_OUTPUT
-        else
-          echo "toolchain_installed=false" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Install ARM GCC toolchain if needed
-      if: steps.check_toolchain.outputs.toolchain_installed == 'false'
+    - name: Install ARM GCC toolchain
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
@@ -34,7 +24,7 @@ jobs:
 
     - name: Configure CMake
       working-directory: build
-      run: cmake ..
+      run: cmake .. 
 
     - name: Build with Make
       working-directory: build
@@ -43,42 +33,3 @@ jobs:
     - name: List build output files
       working-directory: build
       run: ls -l
-
-    - name: Setup gh-pages branch workspace
-      run: |
-        set -e
-        if [ ! -d gh-pages ]; then
-          mkdir gh-pages
-          cd gh-pages
-          git init
-          git remote add origin https://github.com/${{ github.repository }}.git
-          if git ls-remote --exit-code --heads origin gh-pages; then
-            git fetch origin gh-pages
-            git checkout -b gh-pages origin/gh-pages
-          else
-            git checkout --orphan gh-pages
-            git rm -rf .
-            git commit --allow-empty -m "Initialize gh-pages branch"
-            git push -u origin gh-pages
-          fi
-          cd ..
-        else
-          cd gh-pages
-          git fetch origin
-          git checkout gh-pages || git checkout -b gh-pages
-          cd ..
-        fi
-
-    - name: Copy build artifacts to gh-pages
-      run: |
-        cp -r build/. gh-pages/
-        ls -la gh-pages
-
-    - name: Commit and push build artifacts to gh-pages
-      run: |
-        cd gh-pages
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add .
-        git diff-index --quiet HEAD || git commit -m "Auto update build artifacts from master"
-        git push origin gh-pages
